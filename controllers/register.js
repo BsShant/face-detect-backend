@@ -1,0 +1,41 @@
+
+
+const registerHandler= (req,res,bcrypt,db)=>{
+	const {name, email, password}= req.body;
+	if(!email || !password || !name){
+		return res.json('incorrect form submission');
+	}
+	const hash = bcrypt.hashSync(password,10);
+	console.log(hash);
+	db.transaction(trx=>{
+		trx.insert({
+			hash: hash,
+			email: email
+		})
+		.into('login')
+		.returning('email')
+		.then(loginEmail=>{
+			console.log(loginEmail);
+			return trx('users')
+			.returning('*')
+			.insert({
+				name: name,
+				email: loginEmail[0],
+				joined: new Date()
+		}).then(user=>{
+		res.json(user[0]);
+		})
+	})
+		.then(trx.commit)
+		.catch(trx.rollback)
+	
+	}).catch(err=> res.json('err'));
+
+  
+	
+}
+
+
+module.exports={
+	registerHandler: registerHandler
+}
